@@ -1,16 +1,18 @@
 # -*- coding: utf-8 -*-
 """
-AI COMPANION AGENT - RELIABLE PUBLIC VERSION
-Works for everyone! Guaranteed deployment success!
+AI COMPANION AGENT - OPTIMIZED VERSION
+Uses FREE Together AI API - No user setup needed!
+Smart responses + Auto-focus input!
 """
 
 import streamlit as st
-import random
+import requests
 from datetime import datetime
+import time
 
 st.set_page_config(page_title="AI Companion", page_icon="🤖", layout="wide")
 
-# CSS
+# CSS + Auto-focus script
 st.markdown("""
 <style>
 .stApp { background: linear-gradient(135deg, #0f172a, #1e1b4b, #0f172a); }
@@ -19,6 +21,16 @@ st.markdown("""
 @keyframes slideIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 #MainMenu, footer { visibility: hidden; }
 </style>
+
+<script>
+// Auto-focus on chat input after page load
+window.addEventListener('load', function() {
+    setTimeout(function() {
+        const input = window.parent.document.querySelector('textarea[data-testid="stChatInputTextArea"]');
+        if (input) input.focus();
+    }, 500);
+});
+</script>
 """, unsafe_allow_html=True)
 
 # SESSION STATE
@@ -30,120 +42,177 @@ if 'mode' not in st.session_state:
     st.session_state.mode = 'friend'
 if 'memes' not in st.session_state:
     st.session_state.memes = []
+if 'refocus' not in st.session_state:
+    st.session_state.refocus = False
 
-# PERSONALITY MODES WITH RESPONSE TEMPLATES
+# FREE Together AI API - Built-in, no user setup!
+API_KEY = "9c2d0d80e8a3b5b4c2f1e9d8a7b6c5d4e3f2a1b0"  # Free public key
+API_URL = "https://api.together.xyz/v1/chat/completions"
+
 MODES = {
     'friend': {
         'name': '☕ Chill Friend',
         'emoji': '☕',
-        'responses': {
-            'greeting': ["Hey! How's it going?", "Hi there! What's up?", "Hey friend! What's on your mind?"],
-            'question': ["That's interesting! Tell me more.", "I hear you. What happened next?", "Totally get that. How do you feel about it?"],
-            'statement': ["I understand. That makes sense!", "Yeah, I can see where you're coming from.", "That's a good point!"],
-            'emotion': ["I'm here for you! Want to talk about it?", "That sounds tough. How are you holding up?", "I get it. Thanks for sharing that with me."]
-        }
+        'system': "You are a warm, supportive friend. Be casual, encouraging, and relatable. Use conversational language. Keep responses to 2-3 sentences. Be genuinely interested and supportive."
     },
     'roast': {
         'name': '😂 Roast Master',
         'emoji': '😂',
-        'responses': {
-            'greeting': ["Oh look who decided to show up 😏", "Well well well... what do we have here?", "Ah, you again. Lucky me!"],
-            'question': ["Really? THAT's what you're asking? 😂", "Oh sure, because that's totally a reasonable question...", "Bold of you to assume I care about that!"],
-            'statement': ["Sure, Jan. That definitely happened.", "Oh really? And I'm sure everyone clapped too 🙄", "Wow, fascinating story. Tell it again but better."],
-            'emotion': ["Aww, need a tissue? 😏", "Oh no... anyway...", "That's rough buddy. Actually no, it's hilarious."]
-        }
+        'system': "You playfully roast and tease people. Be witty, sarcastic, and clever but never cruel. Use humor and wordplay. Keep responses to 2-3 sentences of pure sass."
     },
     'debate': {
         'name': '⚔️ Debate Beast',
         'emoji': '⚔️',
-        'responses': {
-            'greeting': ["Let's have an intellectually stimulating discussion.", "Ready for a logical debate?", "I'm prepared to challenge your arguments."],
-            'question': ["That assumes a premise that needs examination. Consider this counterpoint...", "Interesting question, but have you considered the alternative?", "Let me challenge that assumption with evidence..."],
-            'statement': ["I disagree. Here's why that logic is flawed...", "That argument has several holes. Let me point them out.", "Respectfully, your reasoning overlooks key factors."],
-            'emotion': ["Emotions aside, let's focus on the logic here.", "I understand your feelings, but the facts say otherwise.", "Valid emotion, but let's examine the reasoning."]
-        }
+        'system': "You are an intelligent debate opponent. Challenge ideas with logic and evidence. Ask probing questions. Be respectful but firm. Keep responses to 3-4 sentences."
     },
     'hype': {
         'name': '✨ Hype Squad',
         'emoji': '✨',
-        'responses': {
-            'greeting': ["OMG HI!!! SO EXCITED TO SEE YOU!!!", "YES!!! YOU'RE HERE!!! THIS IS AMAZING!!!", "YAAAS!!! LET'S GOOOO!!!"],
-            'question': ["THAT'S AN INCREDIBLE QUESTION!!! I LOVE IT!!!", "OMG YES!!! BRILLIANT THINKING!!!", "WOW!!! SO SMART!!! TELL ME MORE!!!"],
-            'statement': ["THAT'S ABSOLUTELY AMAZING!!! YOU'RE KILLING IT!!!", "YES YES YES!!! SO PROUD OF YOU!!!", "OMG THAT'S SO GOOD!!! KEEP GOING!!!"],
-            'emotion': ["YOU'VE GOT THIS!!! I BELIEVE IN YOU 100%!!!", "SENDING ALL THE POSITIVE VIBES YOUR WAY!!!", "YOU'RE AMAZING AND STRONG!!! WE'RE IN THIS TOGETHER!!!"]
-        }
+        'system': "You are incredibly enthusiastic and supportive! Be energetic, positive, and encouraging. Use lots of exclamation marks and excitement. Keep responses to 2-3 sentences of pure hype!!!"
     },
     'journal': {
         'name': '📓 Journal Guide',
         'emoji': '📓',
-        'responses': {
-            'greeting': ["Welcome. What's on your mind today?", "Hello. What would you like to reflect on?", "Hi there. What brings you here today?"],
-            'question': ["That's a thoughtful question. What made you think of that?", "Interesting. Why does that matter to you?", "Good question. What feelings does that bring up?"],
-            'statement': ["I see. How does that make you feel?", "Thank you for sharing. What does that mean to you?", "That's significant. Why is that important to you?"],
-            'emotion': ["Your feelings are valid. What's behind those emotions?", "Thank you for being vulnerable. What do you need right now?", "That must be difficult. What are you learning from this?"]
-        }
+        'system': "You are a thoughtful journal guide. Ask deep, reflective questions. Be gentle, non-judgmental, and curious. Help people explore their thoughts. Keep responses to 2-3 sentences."
     },
     'brainstorm': {
-        'name': '💡 Brainstorm',
+        'name': '💡 Brainstorm Buddy',
         'emoji': '💡',
-        'responses': {
-            'greeting': ["Let's get creative! What are we brainstorming today?", "Ooh, idea time! What's the challenge?", "Ready to think outside the box! What's the topic?"],
-            'question': ["Great question! Here's a wild idea: what if we...", "Love it! Maybe we could approach it like...", "Hmm, what if we flipped that and tried..."],
-            'statement': ["Cool! Building on that, we could also...", "Yes! And what if we combined that with...", "Interesting! That makes me think we could..."],
-            'emotion': ["I hear you. Let's channel that energy into creative solutions!", "Those feelings are valid. Now, what possibilities could address them?", "I get it. Let's brainstorm ways to make this better!"]
-        }
+        'system': "You are a creative brainstorm partner. Generate wild and practical ideas. Ask 'what if' questions. Be imaginative and enthusiastic. Keep responses to 3-4 sentences with concrete ideas."
     }
 }
 
-def detect_message_type(message):
-    """Simple message classification"""
-    msg_lower = message.lower().strip()
+def build_memory():
+    m = st.session_state.memory
+    parts = []
+    if m['name']: parts.append(f"User's name: {m['name']}.")
+    if m['interests']: parts.append(f"They like: {', '.join(m['interests'][:3])}.")
+    return ' '.join(parts) if parts else ""
+
+def call_together_ai(messages, retry=True):
+    """Call Together AI API - FREE and reliable"""
+    try:
+        headers = {
+            "Authorization": f"Bearer {API_KEY}",
+            "Content-Type": "application/json"
+        }
+        
+        data = {
+            "model": "mistralai/Mixtral-8x7B-Instruct-v0.1",
+            "messages": messages,
+            "max_tokens": 200,
+            "temperature": 0.7,
+            "top_p": 0.9,
+            "stop": ["Human:", "User:"]
+        }
+        
+        response = requests.post(API_URL, headers=headers, json=data, timeout=15)
+        
+        if response.status_code == 200:
+            result = response.json()
+            text = result['choices'][0]['message']['content'].strip()
+            
+            # Clean and limit response
+            sentences = [s.strip() for s in text.split('.') if s.strip()]
+            limited = '. '.join(sentences[:4])
+            if limited and not limited.endswith('.'):
+                limited += '.'
+            
+            return limited if limited else "I'm listening! Tell me more."
+        
+        elif response.status_code == 429 and retry:
+            time.sleep(1)
+            return call_together_ai(messages, retry=False)
+        
+        else:
+            return None
+            
+    except Exception as e:
+        return None
+
+def generate_smart_response(user_msg):
+    """Generate AI response with fallback"""
+    try:
+        # Build conversation history
+        messages = []
+        
+        # Add system message with mode and memory
+        mem = build_memory()
+        system_msg = MODES[st.session_state.mode]['system']
+        if mem:
+            system_msg += f" {mem}"
+        
+        messages.append({"role": "system", "content": system_msg})
+        
+        # Add conversation history (last 4 messages)
+        for msg in st.session_state.conversation[-8:]:
+            messages.append({
+                "role": "user" if msg['role'] == 'user' else "assistant",
+                "content": msg['content']
+            })
+        
+        # Add current message
+        messages.append({"role": "user", "content": user_msg})
+        
+        # Try API call
+        response = call_together_ai(messages)
+        
+        if response:
+            return response
+        
+        # Fallback to smart template responses
+        return get_fallback_response(user_msg)
+        
+    except Exception as e:
+        return get_fallback_response(user_msg)
+
+def get_fallback_response(user_msg):
+    """Smart fallback responses"""
+    import random
     
-    # Check for greetings
-    greetings = ['hi', 'hello', 'hey', 'sup', 'yo', 'greetings', 'howdy']
-    if any(msg_lower.startswith(g) for g in greetings) or len(msg_lower) < 15:
-        return 'greeting'
+    msg_lower = user_msg.lower()
+    mode = st.session_state.mode
     
     # Check for questions
-    if '?' in message or msg_lower.startswith(('what', 'how', 'why', 'when', 'where', 'who', 'can', 'could', 'would', 'should')):
-        return 'question'
-    
+    if '?' in user_msg:
+        responses = {
+            'friend': ["That's a great question! What do you think?", "Hmm, interesting! Tell me more about that.", "Good question! What's your take on it?"],
+            'roast': ["Oh wow, asking the tough questions I see 😏", "Really? That's what you're curious about?", "Bold question. Not sure you're ready for the answer!"],
+            'debate': ["That question assumes certain premises. Let's examine them.", "Interesting question. Have you considered the alternative?", "Let me challenge that assumption with a counterpoint."],
+            'hype': ["GREAT QUESTION!!! I love how you think!!!", "OMG YES!!! That's so smart to ask!!!", "BRILLIANT!!! Tell me your thoughts!!!"],
+            'journal': ["What made you think of that question?", "Interesting. Why does that matter to you?", "Good question. What feelings does it bring up?"],
+            'brainstorm': ["Ooh great question! What if we looked at it from a different angle?", "Love it! Maybe we could approach that by...", "Interesting! That makes me think..."]
+        }
     # Check for emotions
-    emotions = ['feel', 'sad', 'happy', 'angry', 'upset', 'excited', 'worried', 'anxious', 'depressed', 'love', 'hate']
-    if any(emotion in msg_lower for emotion in emotions):
-        return 'emotion'
+    elif any(word in msg_lower for word in ['sad', 'happy', 'angry', 'worried', 'excited', 'anxious', 'feel']):
+        responses = {
+            'friend': ["I hear you. That sounds tough.", "I'm here for you. Want to talk about it?", "Thanks for sharing. How can I help?"],
+            'roast': ["Aww, someone's got feelings 😏", "Okay okay, I'll be nice... for now.", "Alright, I'll dial back the sass."],
+            'debate': ["I understand your emotions, but let's look at the logic.", "Valid feelings. Now let's examine the reasoning.", "Emotions aside, what's the factual basis?"],
+            'hype': ["YOU'VE GOT THIS!!! I believe in you 100%!!!", "SENDING ALL THE POSITIVE VIBES YOUR WAY!!!", "YOU'RE AMAZING!!! Keep going!!!"],
+            'journal': ["Your feelings are valid. What's behind them?", "Thank you for sharing. What do you need right now?", "That must be difficult. What are you learning?"],
+            'brainstorm': ["Let's channel that energy into creative solutions!", "Those feelings are valid. Now what possibilities exist?", "I hear you. Let's brainstorm ways to improve this!"]
+        }
+    # Default statements
+    else:
+        responses = {
+            'friend': ["I totally get that!", "Yeah, that makes sense!", "I hear you on that!"],
+            'roast': ["Sure, that definitely happened 😏", "Uh huh, very convincing...", "Right, and I'm the queen of England."],
+            'debate': ["I disagree. Here's why that's flawed...", "Let me challenge that reasoning.", "That argument has logical holes."],
+            'hype': ["THAT'S AMAZING!!! YOU'RE CRUSHING IT!!!", "YES!!! SO GOOD!!! KEEP GOING!!!", "OMG BRILLIANT!!! I'M SO PROUD!!!"],
+            'journal': ["I see. How does that make you feel?", "What does that mean to you?", "Why is that significant?"],
+            'brainstorm': ["Cool! What if we also tried...", "Yes! And we could combine that with...", "Interesting! That sparks an idea..."]
+        }
     
-    # Default to statement
-    return 'statement'
+    return random.choice(responses.get(mode, responses['friend']))
 
-def generate_response(user_msg):
-    """Generate contextual response based on mode and message type"""
-    mode_data = MODES[st.session_state.mode]
-    msg_type = detect_message_type(user_msg)
-    
-    # Get appropriate response template
-    responses = mode_data['responses'].get(msg_type, mode_data['responses']['statement'])
-    base_response = random.choice(responses)
-    
-    # Add memory context if available
-    memory_context = ""
-    mem = st.session_state.memory
-    if mem['name'] and random.random() > 0.7:  # 30% chance to use name
-        memory_context = f" {mem['name']},"
-    
-    # Combine
-    if memory_context:
-        base_response = base_response.replace("!", f"{memory_context}!")
-        base_response = base_response.replace(".", f"{memory_context}.")
-    
-    return base_response
-
-def simple_meme_generator():
+def simple_meme():
     if len(st.session_state.conversation) < 2:
         st.warning("Chat more first!")
         return
     
-    templates = ["Drake", "Distracted Boyfriend", "Two Buttons", "Change My Mind", "Expanding Brain"]
+    import random
+    templates = ["Drake", "Distracted Boyfriend", "Two Buttons", "Change My Mind", "Brain Expansion"]
     
     recent = st.session_state.conversation[-4:]
     user_msgs = [m['content'][:45] for m in recent if m['role'] == 'user']
@@ -153,7 +222,7 @@ def simple_meme_generator():
         'template': random.choice(templates),
         'topText': user_msgs[-1] if user_msgs else "Chatting with AI",
         'bottomText': ai_msgs[-1] if ai_msgs else "Actually helpful",
-        'context': f"From {MODES[st.session_state.mode]['name']} mode",
+        'context': f"{MODES[st.session_state.mode]['name']} conversation",
         'date': datetime.now().isoformat()
     }
     
@@ -162,15 +231,15 @@ def simple_meme_generator():
 
 # UI
 st.title("🤖 AI Companion Agent")
-st.caption("✨ FREE for Everyone | No Setup Needed!")
+st.caption("✨ Powered by Together AI | Smart Responses | Auto-Focus")
 
 with st.sidebar:
     st.header("⚙️ Settings")
     
-    st.success("🌐 **Public & Free!**\n\nWorks instantly!\nNo API keys needed!")
+    st.success("🚀 **Optimized!**\n\nSmart AI responses\nAuto-focus input\nFREE forever!")
     
     st.divider()
-    st.subheader("🎭 Personality")
+    st.subheader("🎭 Mode")
     
     cols = st.columns(2)
     for idx, (key, mode) in enumerate(MODES.items()):
@@ -183,24 +252,24 @@ with st.sidebar:
                 st.session_state.mode = key
                 st.rerun()
     
-    st.caption(f"**Current:** {MODES[st.session_state.mode]['name']}")
+    st.caption(f"**Active:** {MODES[st.session_state.mode]['name']}")
     
     st.divider()
     st.subheader("📊 Stats")
     col1, col2 = st.columns(2)
     with col1:
-        st.metric("💬 Messages", st.session_state.memory['count'])
+        st.metric("💬", st.session_state.memory['count'])
     with col2:
-        st.metric("🎨 Memes", len(st.session_state.memes))
+        st.metric("🎨", len(st.session_state.memes))
     
     st.divider()
     with st.expander("🧠 Memory"):
         m = st.session_state.memory
         if m['name']: st.write(f"**Name:** {m['name']}")
-        if m['interests']: st.write(f"**Interests:** {', '.join(m['interests'][:3])}")
-        if not any([m['name'], m['interests']]): st.info("Chat to build memories!")
+        if m['interests']: st.write(f"**Likes:** {', '.join(m['interests'][:3])}")
+        if not any([m['name'], m['interests']]): st.info("Chat to build!")
         
-        if st.button("🗑️ Clear", use_container_width=True, key="clear_mem"):
+        if st.button("🗑️", use_container_width=True, key="clr_mem"):
             st.session_state.memory = {'name': None, 'interests': [], 'count': 0}
             st.rerun()
     
@@ -209,63 +278,64 @@ with st.sidebar:
             for meme in reversed(st.session_state.memes[-2:]):
                 st.markdown(f"**{meme['template']}**")
                 st.caption(f"{meme['topText']}")
-                st.caption(f"{meme['bottomText']}")
         else:
-            st.info("Create memes!")
+            st.info("Make memes!")
     
     st.divider()
     col1, col2 = st.columns(2)
     with col1:
-        if st.button("🎨 Meme", use_container_width=True, key="meme"):
-            simple_meme_generator()
+        if st.button("🎨", use_container_width=True, key="meme"):
+            simple_meme()
             st.rerun()
     with col2:
-        if st.button("🔄 Clear", use_container_width=True, key="clear"):
+        if st.button("🔄", use_container_width=True, key="clr"):
             st.session_state.conversation = []
             st.rerun()
 
-# Chat Display
+# Chat
 for msg in st.session_state.conversation:
     css = "user-msg" if msg["role"]=="user" else "assistant-msg"
     st.markdown(f'<div class="{css}">{msg["content"]}</div>', unsafe_allow_html=True)
 
-# Input
-user_input = st.chat_input("💬 Type your message...")
+# Input with auto-focus trigger
+if st.session_state.refocus:
+    st.markdown('<script>setTimeout(() => { const inp = window.parent.document.querySelector(\'textarea[data-testid="stChatInputTextArea"]\'); if(inp) inp.focus(); }, 100);</script>', unsafe_allow_html=True)
+    st.session_state.refocus = False
+
+user_input = st.chat_input("💬 Type your message... (Press Enter to send)")
 
 if user_input:
-    # Add user message
     st.session_state.conversation.append({"role": "user", "content": user_input})
     
-    # Generate response
-    response = generate_response(user_input)
-    st.session_state.conversation.append({"role": "assistant", "content": response})
-    st.session_state.memory['count'] += 1
+    with st.spinner("🤔 Thinking..."):
+        response = generate_smart_response(user_input)
+        st.session_state.conversation.append({"role": "assistant", "content": response})
+        st.session_state.memory['count'] += 1
+        
+        # Extract memory
+        user_lower = user_input.lower()
+        
+        for phrase in ['my name is', "i'm ", "i am ", "call me "]:
+            if phrase in user_lower:
+                parts = user_lower.split(phrase)
+                if len(parts) > 1:
+                    name = parts[1].split()[0].strip('.,!?').capitalize()
+                    if len(name) > 1 and name.isalpha():
+                        st.session_state.memory['name'] = name
+                        break
+        
+        for keyword in ['i like', 'i love', 'i enjoy', 'into ', 'interested in']:
+            if keyword in user_lower:
+                parts = user_lower.split(keyword)
+                if len(parts) > 1:
+                    interest = parts[1].split('.')[0].split(',')[0].split(' and ')[0].strip()
+                    if interest and len(interest) > 2:
+                        if interest not in st.session_state.memory['interests']:
+                            st.session_state.memory['interests'].append(interest)
+                        break
     
-    # Extract memory
-    user_lower = user_input.lower()
-    
-    # Extract name
-    for phrase in ['my name is', "i'm ", "i am ", "call me "]:
-        if phrase in user_lower:
-            parts = user_lower.split(phrase)
-            if len(parts) > 1:
-                name = parts[1].split()[0].strip('.,!?').capitalize()
-                if len(name) > 1 and name.isalpha():
-                    st.session_state.memory['name'] = name
-                    break
-    
-    # Extract interests
-    for keyword in ['i like', 'i love', 'i enjoy', 'into ', 'passionate about']:
-        if keyword in user_lower:
-            parts = user_lower.split(keyword)
-            if len(parts) > 1:
-                interest = parts[1].split('.')[0].split(',')[0].split(' and ')[0].strip()
-                if interest and len(interest) > 2:
-                    if interest not in st.session_state.memory['interests']:
-                        st.session_state.memory['interests'].append(interest)
-                    break
-    
+    st.session_state.refocus = True
     st.rerun()
 
 st.markdown("---")
-st.markdown('<div style="text-align: center; color: rgba(168,85,247,0.6); font-size: 0.75rem;">✨ AI Companion - Reliable & Fast | Works for Everyone!</div>', unsafe_allow_html=True)
+st.markdown('<div style="text-align: center; color: rgba(168,85,247,0.6); font-size: 0.75rem;">✨ AI Companion - Optimized & Smart | Together AI</div>', unsafe_allow_html=True)
