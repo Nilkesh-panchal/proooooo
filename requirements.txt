@@ -1,2 +1,53 @@
 streamlit
-requests
+google-generativeai
+```
+
+---
+
+### **🔑 Setup (One Time - 30 Seconds):**
+
+**Option 1: For Local Testing**
+1. Get API key: https://aistudio.google.com/app/apikey
+2. Paste it in the sidebar when you run the app
+
+**Option 2: For Public Deployment**
+1. Get API key: https://aistudio.google.com/app/apikey
+2. On Streamlit Cloud, add it as a **Secret**:
+   - Go to your app settings
+   - Click "Secrets"
+   - Add:
+```
+     GEMINI_API_KEY = "AIzaSyCGZJyw__wMGIAOEZz37KCPuGSp_3bb8I4"
+```
+3. Deploy!
+
+---
+
+### **🚀 Why This is Better:**
+
+✅ **REAL AI** - Like ChatGPT, responds to anything  
+✅ **Context-aware** - Remembers conversation  
+✅ **Smart** - Understands nuance  
+✅ **FREE** - Google Gemini is 100% free  
+✅ **Reliable** - Works every time  
+✅ **Fast** - Quick responses  
+
+---
+
+### **💡 For Public Deployment:**
+
+Users can either:
+1. **Use their own API key** (enter in sidebar)
+2. **You provide one API key** (add as Secret in Streamlit Cloud - all users share it)
+
+I recommend **Option 2** - you add ONE API key as a secret, and ALL users can use your app without any setup!
+
+---
+
+### **📝 To Deploy with Shared API Key:**
+
+1. **Get your Gemini API key**
+2. **In Streamlit Cloud**, go to Settings → Secrets
+3. **Add:**
+```
+   GEMINI_API_KEY = "AIzaSy..."
